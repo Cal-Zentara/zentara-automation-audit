@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zentara — Free Automation Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ── Tokens ──────────────────────────────────────────────── */
+  :root {
+    --purple-deepest: #090614;
+    --purple-deep:    #120d2a;
+    --purple-mid:     #1e1545;
+    --purple-soft:    #2d1f6e;
+    --purple-accent:  #4a2fa0;
+    --gold:           #c9a24a;
+    --gold-light:     #e2c27a;
+    --gold-dim:       #8a6a28;
+    --text-primary:   #f0ecff;
+    --text-secondary: #a89fcc;
+    --text-muted:     #6b5f99;
+    --border:         rgba(201,162,74,0.15);
+    --border-hover:   rgba(201,162,74,0.4);
+    --card-bg:        rgba(30,21,69,0.6);
+    --radius:         14px;
+    --radius-sm:      8px;
+    --transition:     cubic-bezier(0.22,1,0.36,1);
+  }
+
+  /* ── Reset ───────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--purple-deepest);
+    color: var(--text-primary);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── Abstract background ─────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 10%, rgba(74,47,160,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 85% 80%, rgba(201,162,74,0.08) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 40% at 60% 30%, rgba(45,31,110,0.4) 0%, transparent 50%);
+  }
+
+  /* Noise grain */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  .shell {
+    position: relative;
+    z-index: 2;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── Progress bar ────────────────────────────────────────── */
+  #progress-bar-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    z-index: 100;
+    display: none;
+  }
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-light));
+    transition: width 0.5s var(--transition);
+    width: 0%;
+  }
+  #progress-label {
+    position: fixed;
+    top: 10px; right: 20px;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    z-index: 100;
+    display: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Section visibility ──────────────────────────────────── */
+  .section {
+    display: none;
+    animation: fadeUp 0.5s var(--transition) both;
+  }
+  .section.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Intro screen ────────────────────────────────────────── */
+  #intro {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 0 40px;
+  }
+  #intro.active { display: flex; }
+
+  .brand-lockup {
+    margin-bottom: 56px;
+  }
+  .brand-word {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(13px, 2vw, 15px);
+    font-weight: 500;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .brand-rule {
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+    margin: 12px 0;
+    opacity: 0.6;
+  }
+
+  .intro-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 20px;
+    opacity: 0.85;
+  }
+
+  .intro-headline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(42px, 8vw, 68px);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 28px;
+  }
+  .intro-headline em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .intro-sub {
+    font-size: 17px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    max-width: 520px;
+    margin-bottom: 48px;
+    font-weight: 300;
+  }
+
+  .intro-meta {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 56px;
+    flex-wrap: wrap;
+  }
+  .intro-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .intro-meta-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .intro-meta-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 17px 36px;
+    background: var(--gold);
+    color: var(--purple-deepest);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.25s var(--transition);
+    text-decoration: none;
+  }
+  .btn-primary:hover {
+    background: var(--gold-light);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(201,162,74,0.25);
+  }
+  .btn-primary:active { transform: translateY(0) scale(0.98); }
+  .btn-primary .arrow { font-size: 18px; transition: transform 0.2s; }
+  .btn-primary:hover .arrow { transform: translateX(3px); }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 24px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover { color: var(--text-secondary); border-color: rgba(255,255,255,0.18); }
+
+  /* ── Section header ──────────────────────────────────────── */
+  .section-header {
+    padding: 80px 0 40px;
+  }
+  .section-tag {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 16px;
+    opacity: 0.8;
+  }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+  .section-desc {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  /* ── Questions ───────────────────────────────────────────── */
+  .question-block {
+    margin-bottom: 40px;
+  }
+  .question-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .question-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: -8px;
+    margin-bottom: 14px;
+    font-weight: 300;
+  }
+
+  /* Text inputs */
+  .text-input {
+    width: 100%;
+    padding: 15px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    transition: border-color 0.2s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    outline: none;
+    resize: none;
+  }
+  .text-input::placeholder { color: var(--text-muted); }
+  .text-input:focus { border-color: var(--border-hover); }
+
+  /* Choice buttons */
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .choices.row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s var(--transition);
+    text-align: left;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .choice-btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+    background: rgba(74,47,160,0.25);
+  }
+  .choice-btn.selected {
+    border-color: var(--gold);
+    background: rgba(201,162,74,0.1);
+    color: var(--gold-light);
+  }
+  .choice-btn.selected .choice-dot {
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+
+  .choices.row .choice-btn {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+  }
+
+  .choice-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--text-muted);
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .multi .choice-dot { border-radius: 4px; }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 40px 0;
+  }
+
+  /* ── Navigation buttons ──────────────────────────────────── */
+  .nav-buttons {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-top: 16px;
+  }
+
+  /* ── Email section ───────────────────────────────────────── */
+  .email-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+  }
+  .email-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,162,74,0.4), transparent);
+  }
+  .email-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+  .email-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    line-height: 1.2;
+  }
+  .email-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 520px) {
+    .input-row { grid-template-columns: 1fr; }
+  }
+  .input-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .email-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 14px;
+    font-weight: 300;
+  }
+
+  /* ── Results screen ──────────────────────────────────────── */
+  #results {
+    padding-top: 80px;
+  }
+  #results.active { display: block; }
+
+  .results-top {
+    margin-bottom: 56px;
+  }
+  .results-score-ring {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .results-score-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .results-headline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(32px, 6vw, 52px);
+    font-weight: 600;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .results-headline em { font-style: italic; color: var(--gold); }
+  .results-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    font-weight: 300;
+    max-width: 500px;
+    margin-bottom: 8px;
+  }
+  .results-name-line {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+    font-weight: 300;
+  }
+
+  /* Automation cards */
+  .auto-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .auto-card {
+    position: relative;
+    padding: 28px 28px 28px 100px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overflow: hidden;
+    animation: fadeUp 0.5s var(--transition) both;
+  }
+  .auto-card:nth-child(1) { animation-delay: 0.05s; }
+  .auto-card:nth-child(2) { animation-delay: 0.15s; }
+  .auto-card:nth-child(3) { animation-delay: 0.25s; }
+  .auto-card.rank-1 { border-color: rgba(201,162,74,0.4); }
+  .auto-card.rank-1::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .auto-rank {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--purple-accent);
+    opacity: 0.5;
+  }
+  .auto-card.rank-1 .auto-rank { color: var(--gold-dim); opacity: 1; }
+
+  .auto-tag {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.7;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .auto-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .auto-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+  .auto-impact {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 500;
+    opacity: 0.85;
+  }
+
+  /* CTA block */
+  .cta-block {
+    background: linear-gradient(135deg, rgba(74,47,160,0.3) 0%, rgba(30,21,69,0.6) 100%);
+    border: 1px solid rgba(201,162,74,0.2);
+    border-radius: var(--radius);
+    padding: 48px 40px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,162,74,0.5), transparent);
+  }
+  .cta-block::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: -60px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,162,74,0.06) 0%, transparent 70%);
+  }
+  .cta-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    opacity: 0.8;
+  }
+  .cta-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(26px, 4vw, 36px);
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+  .cta-desc {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    font-weight: 300;
+    margin-bottom: 32px;
+    max-width: 440px;
+  }
+
+  /* ── Success screen ──────────────────────────────────────── */
+  #success {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 0;
+  }
+  #success.active { display: flex; }
+  .success-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
+    color: var(--gold);
+    font-size: 22px;
+  }
+  .success-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 600;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+  .success-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.65;
+    max-width: 480px;
+    margin-bottom: 40px;
+  }
+
+  /* ── Toast ───────────────────────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    padding: 12px 20px;
+    background: rgba(30,21,69,0.95);
+    border: 1px solid rgba(201,162,74,0.3);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--gold-light);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 200;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s var(--transition);
+    pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Error ───────────────────────────────────────────────── */
+  .inline-error {
+    font-size: 13px;
+    color: #e07070;
+    margin-top: 10px;
+    display: none;
+  }
+  .inline-error.show { display: block; }
+
+  /* ── Mobile ──────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .shell { padding: 0 16px 60px; }
+    .email-section { padding: 28px 20px; }
+    .auto-card { padding: 24px 20px 24px 80px; }
+    .auto-rank { left: 16px; font-size: 32px; }
+    .cta-block { padding: 32px 24px; }
+    .intro-meta { gap: 20px; }
+    .nav-buttons { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+<div id="progress-label"></div>
+
+<div class="shell">
+
+  <!-- ════════════ INTRO ════════════ -->
+  <section class="section active" id="intro">
+    <div class="brand-lockup">
+      <div class="brand-word">Zentara</div>
+      <div class="brand-rule"></div>
+    </div>
+
+    <div class="intro-eyebrow">Free Automation Audit</div>
+
+    <h1 class="intro-headline">
+      Find out what you<br/>should <em>automate first.</em>
+    </h1>
+
+    <p class="intro-sub">
+      Answer 16 questions about your business. We'll rank your top 3 automation opportunities — specific to how you actually work, not generic advice.
+    </p>
+
+    <div class="intro-meta">
+      <div class="intro-meta-item">
+        <span class="intro-meta-num">16</span>
+        <span class="intro-meta-label">questions</span>
+      </div>
+      <div class="intro-meta-item">
+        <span class="intro-meta-num">8</span>
+        <span class="intro-meta-label">minutes</span>
+      </div>
+      <div class="intro-meta-item">
+        <span class="intro-meta-num">3</span>
+        <span class="intro-meta-label">ranked automations</span>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="startQuiz()">
+      Start the audit <span class="arrow">→</span>
+    </button>
+  </section>
+
+  <!-- ════════════ SECTION 1 — YOUR BUSINESS ════════════ -->
+  <section class="section" id="s1">
+    <div class="section-header">
+      <div class="section-tag">Section 1 of 4 — Your Business</div>
+      <h2 class="section-title">Tell me about what you do.</h2>
+      <p class="section-desc">Two quick ones — skip the polish, just be direct.</p>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">1. Business name and what you do — one sentence.</label>
+      <textarea class="text-input" id="q1" rows="2" placeholder="e.g. Iron Gate Media — we run paid ads for e-commerce brands" oninput="autosave()"></textarea>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">2. What eats most of your time right now?</label>
+      <p class="question-hint">Your own words. No wrong answer.</p>
+      <textarea class="text-input" id="q2" rows="2" placeholder="e.g. Following up on quotes that go cold, chasing invoices..." oninput="autosave()"></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="question-block">
+      <label class="question-label">3. How many people work here?</label>
+      <div class="choices row" data-q="q3" data-type="single">
+        <button class="choice-btn" data-value="solo"><span class="choice-dot"></span>Just me</button>
+        <button class="choice-btn" data-value="small"><span class="choice-dot"></span>2 – 5</button>
+        <button class="choice-btn" data-value="mid"><span class="choice-dot"></span>6 – 20</button>
+        <button class="choice-btn" data-value="large"><span class="choice-dot"></span>20+</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">4. What's your role day-to-day?</label>
+      <div class="choices row" data-q="q4" data-type="single">
+        <button class="choice-btn" data-value="owner"><span class="choice-dot"></span>Owner / Founder</button>
+        <button class="choice-btn" data-value="ops"><span class="choice-dot"></span>Operations</button>
+        <button class="choice-btn" data-value="sales"><span class="choice-dot"></span>Sales</button>
+        <button class="choice-btn" data-value="marketing"><span class="choice-dot"></span>Marketing</button>
+        <button class="choice-btn" data-value="other_role"><span class="choice-dot"></span>Other</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">5. How did you find Cal?</label>
+      <div class="choices row" data-q="q5" data-type="single">
+        <button class="choice-btn" data-value="youtube"><span class="choice-dot"></span>YouTube</button>
+        <button class="choice-btn" data-value="instagram"><span class="choice-dot"></span>Instagram</button>
+        <button class="choice-btn" data-value="tiktok"><span class="choice-dot"></span>TikTok</button>
+        <button class="choice-btn" data-value="referral"><span class="choice-dot"></span>Referral</button>
+        <button class="choice-btn" data-value="other_source"><span class="choice-dot"></span>Other</button>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-primary" onclick="goTo('s2')">Continue <span class="arrow">→</span></button>
+    </div>
+  </section>
+
+  <!-- ════════════ SECTION 2 — WHERE TIME GOES ════════════ -->
+  <section class="section" id="s2">
+    <div class="section-header">
+      <div class="section-tag">Section 2 of 4 — Where Time Goes</div>
+      <h2 class="section-title">What's breaking down?</h2>
+      <p class="section-desc">This is where your automation opportunities live.</p>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">6. Which of these eat your week? (Pick all that apply)</label>
+      <div class="choices multi" data-q="q6" data-type="multi">
+        <button class="choice-btn" data-value="follow_up"><span class="choice-dot"></span>Following up with leads or clients</button>
+        <button class="choice-btn" data-value="invoicing"><span class="choice-dot"></span>Invoicing and chasing payments</button>
+        <button class="choice-btn" data-value="scheduling"><span class="choice-dot"></span>Scheduling and calendar management</button>
+        <button class="choice-btn" data-value="data_entry"><span class="choice-dot"></span>Data entry and copy-pasting between tools</button>
+        <button class="choice-btn" data-value="reporting"><span class="choice-dot"></span>Pulling reports or tracking numbers</button>
+        <button class="choice-btn" data-value="onboarding"><span class="choice-dot"></span>Onboarding new clients</button>
+        <button class="choice-btn" data-value="content_posting"><span class="choice-dot"></span>Posting content or social media</button>
+        <button class="choice-btn" data-value="email_comms"><span class="choice-dot"></span>Responding to the same emails over and over</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">7. What breaks first when you step away?</label>
+      <div class="choices" data-q="q7" data-type="single">
+        <button class="choice-btn" data-value="leads_break"><span class="choice-dot"></span>New leads go cold — nobody follows up</button>
+        <button class="choice-btn" data-value="invoices_break"><span class="choice-dot"></span>Invoices and payments fall behind</button>
+        <button class="choice-btn" data-value="onboard_break"><span class="choice-dot"></span>Client onboarding stalls out</button>
+        <button class="choice-btn" data-value="team_break"><span class="choice-dot"></span>The team doesn't know what to do next</button>
+        <button class="choice-btn" data-value="all_break"><span class="choice-dot"></span>Honestly, everything stops</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">8. How many hours a week go to repetitive admin?</label>
+      <div class="choices row" data-q="q8" data-type="single">
+        <button class="choice-btn" data-value="h_low"><span class="choice-dot"></span>Under 5 hrs</button>
+        <button class="choice-btn" data-value="h_mid"><span class="choice-dot"></span>5 – 10 hrs</button>
+        <button class="choice-btn" data-value="h_high"><span class="choice-dot"></span>10 – 20 hrs</button>
+        <button class="choice-btn" data-value="h_extreme"><span class="choice-dot"></span>More than 20</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">9. What do you wish ran on its own?</label>
+      <p class="question-hint">One sentence — whatever first comes to mind.</p>
+      <textarea class="text-input" id="q9" rows="2" placeholder="e.g. Sending the proposal after a sales call, reminding clients about unpaid invoices..." oninput="autosave()"></textarea>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-primary" onclick="goTo('s3')">Continue <span class="arrow">→</span></button>
+      <button class="btn-ghost" onclick="goTo('s1')">Back</button>
+    </div>
+  </section>
+
+  <!-- ════════════ SECTION 3 — TOOLS ════════════ -->
+  <section class="section" id="s3">
+    <div class="section-header">
+      <div class="section-tag">Section 3 of 4 — Your Setup</div>
+      <h2 class="section-title">How does your business run right now?</h2>
+      <p class="section-desc">No judgment — this tells us where the biggest gains are.</p>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">10. Where does your customer or lead data actually live?</label>
+      <div class="choices" data-q="q10" data-type="single">
+        <button class="choice-btn" data-value="crm"><span class="choice-dot"></span>In a CRM (HubSpot, GoHighLevel, Salesforce, etc.)</button>
+        <button class="choice-btn" data-value="spreadsheet"><span class="choice-dot"></span>A spreadsheet or Notion</button>
+        <button class="choice-btn" data-value="email_inbox"><span class="choice-dot"></span>My email inbox — it's a mess</button>
+        <button class="choice-btn" data-value="nowhere"><span class="choice-dot"></span>Nowhere organized, honestly</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">11. Do your tools talk to each other?</label>
+      <div class="choices" data-q="q11" data-type="single">
+        <button class="choice-btn" data-value="yes_connected"><span class="choice-dot"></span>Yes — most things are connected</button>
+        <button class="choice-btn" data-value="some_connected"><span class="choice-dot"></span>Some do, some don't</button>
+        <button class="choice-btn" data-value="manual"><span class="choice-dot"></span>No — I copy-paste between everything</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">12. What's your invoicing situation?</label>
+      <div class="choices" data-q="q12" data-type="single">
+        <button class="choice-btn" data-value="invoice_auto"><span class="choice-dot"></span>Software handles it automatically</button>
+        <button class="choice-btn" data-value="invoice_manual"><span class="choice-dot"></span>I send invoices manually each time</button>
+        <button class="choice-btn" data-value="invoice_link"><span class="choice-dot"></span>Clients pay via a link, but I still track it manually</button>
+        <button class="choice-btn" data-value="invoice_chaos"><span class="choice-dot"></span>It's chaotic and I hate thinking about it</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">13. How do new clients or leads reach you? (Pick all)</label>
+      <div class="choices multi row" data-q="q13" data-type="multi">
+        <button class="choice-btn" data-value="phone"><span class="choice-dot"></span>Phone</button>
+        <button class="choice-btn" data-value="email"><span class="choice-dot"></span>Email</button>
+        <button class="choice-btn" data-value="instagram_dm"><span class="choice-dot"></span>Instagram DM</button>
+        <button class="choice-btn" data-value="facebook"><span class="choice-dot"></span>Facebook</button>
+        <button class="choice-btn" data-value="website_form"><span class="choice-dot"></span>Website form</button>
+        <button class="choice-btn" data-value="referral_ch"><span class="choice-dot"></span>Referral</button>
+        <button class="choice-btn" data-value="ads"><span class="choice-dot"></span>Paid ads</button>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-primary" onclick="goTo('s4')">Continue <span class="arrow">→</span></button>
+      <button class="btn-ghost" onclick="goTo('s2')">Back</button>
+    </div>
+  </section>
+
+  <!-- ════════════ SECTION 4 — GOALS ════════════ -->
+  <section class="section" id="s4">
+    <div class="section-header">
+      <div class="section-tag">Section 4 of 4 — Goals</div>
+      <h2 class="section-title">What are you actually trying to fix?</h2>
+      <p class="section-desc">This shapes your ranking — be honest.</p>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">14. What's your number one goal right now?</label>
+      <div class="choices" data-q="q14" data-type="single">
+        <button class="choice-btn" data-value="goal_leads"><span class="choice-dot"></span>Get more leads coming in</button>
+        <button class="choice-btn" data-value="goal_close"><span class="choice-dot"></span>Close more of the leads I already have</button>
+        <button class="choice-btn" data-value="goal_time"><span class="choice-dot"></span>Get my time back — stop doing everything manually</button>
+        <button class="choice-btn" data-value="goal_deliver"><span class="choice-dot"></span>Deliver better to the clients I already have</button>
+        <button class="choice-btn" data-value="goal_scale"><span class="choice-dot"></span>Grow without hiring more people</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">15. What have you already tried to fix this?</label>
+      <div class="choices" data-q="q15" data-type="single">
+        <button class="choice-btn" data-value="tried_hire"><span class="choice-dot"></span>Hired someone to handle it</button>
+        <button class="choice-btn" data-value="tried_software"><span class="choice-dot"></span>Bought software that didn't stick</button>
+        <button class="choice-btn" data-value="tried_youtube"><span class="choice-dot"></span>Watched YouTube and gave up</button>
+        <button class="choice-btn" data-value="tried_nothing"><span class="choice-dot"></span>Nothing yet</button>
+        <button class="choice-btn" data-value="tried_other"><span class="choice-dot"></span>Something else</button>
+      </div>
+    </div>
+
+    <div class="question-block">
+      <label class="question-label">16. Budget range to solve this properly?</label>
+      <div class="choices row" data-q="q16" data-type="single">
+        <button class="choice-btn" data-value="b_low"><span class="choice-dot"></span>Under $500</button>
+        <button class="choice-btn" data-value="b_mid"><span class="choice-dot"></span>$500 – $2k</button>
+        <button class="choice-btn" data-value="b_high"><span class="choice-dot"></span>$2k – $5k</button>
+        <button class="choice-btn" data-value="b_top"><span class="choice-dot"></span>$5k+</button>
+        <button class="choice-btn" data-value="b_unsure"><span class="choice-dot"></span>Not sure yet</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Email capture -->
+    <div class="email-section">
+      <div class="email-eyebrow">Almost done</div>
+      <h3 class="email-title">Where should we send your full breakdown?</h3>
+      <p class="email-sub">Your top 3 automations show on screen. We'll email you the full analysis with build estimates and next steps.</p>
+
+      <div class="input-row">
+        <div>
+          <label class="input-label">First name</label>
+          <input class="text-input" id="firstName" type="text" placeholder="Cal" oninput="autosave()" />
+        </div>
+        <div>
+          <label class="input-label">Email address</label>
+          <input class="text-input" id="email" type="email" placeholder="you@company.com" oninput="autosave()" />
+        </div>
+      </div>
+
+      <div id="submit-error" class="inline-error">Something went wrong. Try again or email cal.zentara@gmail.com directly.</div>
+
+      <div class="nav-buttons" style="padding-top:20px">
+        <button class="btn-primary" id="submit-btn" onclick="submitQuiz()">
+          Show my results <span class="arrow">→</span>
+        </button>
+        <button class="btn-ghost" onclick="goTo('s3')">Back</button>
+      </div>
+      <p class="email-note">No spam. Just your results + one follow-up if it looks like a fit.</p>
+    </div>
+  </section>
+
+  <!-- ════════════ RESULTS ════════════ -->
+  <section class="section" id="results">
+    <div class="results-top">
+      <div class="results-score-ring">
+        <span class="results-score-num" id="results-score">—</span>
+      </div>
+      <h2 class="results-headline" id="results-headline">Your top <em>automation opportunities.</em></h2>
+      <p class="results-sub" id="results-sub"></p>
+      <p class="results-name-line" id="results-name-line"></p>
+    </div>
+
+    <div class="auto-cards" id="auto-cards"></div>
+
+    <div class="cta-block">
+      <div class="cta-eyebrow">Next step</div>
+      <h3 class="cta-title">Want me to actually build this for you?</h3>
+      <p class="cta-desc">15 minutes. I'll look at your top automation, tell you exactly how it works, and give you an honest build estimate. No pitch. Just clarity.</p>
+      <a class="btn-primary" href="https://calendly.com/cal-zentara" target="_blank" rel="noopener">
+        Book a free 15-min call <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ════════════ SUCCESS ════════════ -->
+  <section class="section" id="success">
+    <div class="success-icon">&#10003;</div>
+    <div class="brand-word" style="margin-bottom:24px">Zentara</div>
+    <h2 class="success-title">Check your inbox.</h2>
+    <p class="success-sub">Your full automation breakdown is on its way. In the meantime — your top 3 are already on screen if you scroll up.</p>
+    <a class="btn-primary" href="https://calendly.com/cal-zentara" target="_blank" rel="noopener">
+      Book the free 15-min call <span class="arrow">→</span>
+    </a>
+  </section>
+
+</div><!-- /shell -->
+
+<div class="toast" id="toast">Progress saved</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const SECTIONS = ['intro','s1','s2','s3','s4','results','success'];
+const QUIZ_SECTIONS = ['s1','s2','s3','s4'];
+let currentSection = 'intro';
+let answers = {};
+
+// ─── Automation scoring map ───────────────────────────────────────────────────
+const AUTOMATIONS = {
+  lead_followup: {
+    name: 'Lead Follow-Up Automation',
+    tag: 'Highest ROI for most businesses',
+    desc: 'Every new lead gets an automatic response within minutes. Follow-up sequences run on their own — no lead goes cold because you were busy.',
+    impact: 'Avg. 3–5x more leads converted without extra effort',
+    triggers: ['follow_up','leads_break','goal_leads','goal_close','email_comms','instagram_dm','website_form','ads','email','spreadsheet','nowhere','email_inbox','manual','some_connected']
+  },
+  invoice_payment: {
+    name: 'Invoice & Payment Automation',
+    tag: 'Eliminates the most-hated task',
+    desc: 'Invoices go out automatically when work is done. Payment reminders send themselves. You stop chasing money and start tracking it.',
+    impact: 'Most owners recover 5–8 hrs/week immediately',
+    triggers: ['invoicing','invoices_break','invoice_manual','invoice_chaos','invoice_link','h_high','h_extreme','goal_time']
+  },
+  client_onboarding: {
+    name: 'Client Onboarding Automation',
+    tag: 'First impressions run themselves',
+    desc: 'When a new client signs — welcome email, intake form, project setup, calendar invite — all happens automatically. You look professional without doing anything.',
+    impact: 'Saves 2–3 hrs per new client from day one',
+    triggers: ['onboarding','onboard_break','goal_deliver','tried_hire','mid','large','crm']
+  },
+  crm_data_entry: {
+    name: 'CRM & Data Entry Automation',
+    tag: 'Stop copying and pasting forever',
+    desc: 'Every lead, form fill, and inquiry flows into one place automatically. No more spreadsheets. No more forgetting someone. Your data is always current.',
+    impact: 'Removes the #1 cause of dropped leads',
+    triggers: ['data_entry','manual','spreadsheet','nowhere','email_inbox','some_connected','reporting','crm']
+  },
+  appointment_booking: {
+    name: 'Appointment & Booking Automation',
+    tag: 'Fill your calendar without the back-and-forth',
+    desc: 'Clients pick a time, get a confirmation, get a reminder, and show up. Zero manual scheduling. Your calendar stays full without you touching it.',
+    impact: 'Cuts scheduling time to zero, reduces no-shows 60%+',
+    triggers: ['scheduling','phone','referral_ch','goal_leads','solo','small','tried_youtube']
+  },
+  content_scheduling: {
+    name: 'Content Scheduling Automation',
+    tag: 'Post consistently without being online',
+    desc: 'Content gets created or queued and posts automatically across your channels. You batch once and stay visible every day without logging in.',
+    impact: 'Consistent posting without adding to your week',
+    triggers: ['content_posting','instagram_dm','facebook','marketing','goal_leads','youtube','instagram','tiktok']
+  },
+  reporting_analytics: {
+    name: 'Reporting & Analytics Automation',
+    tag: 'Know your numbers without the work',
+    desc: 'Weekly reports on leads, revenue, and performance land in your inbox automatically. No pulling data, no building dashboards — it just arrives.',
+    impact: 'See what\'s working in under 2 minutes each week',
+    triggers: ['reporting','h_high','h_extreme','large','mid','ops','goal_scale','crm','yes_connected']
+  },
+  email_comms: {
+    name: 'Email & Communication Automation',
+    tag: 'Stop answering the same questions twice',
+    desc: 'FAQs, status updates, follow-ups, and check-ins send automatically. Your inbox becomes manageable. Clients feel looked after without you being glued to your phone.',
+    impact: 'Cuts email time in half for most business owners',
+    triggers: ['email_comms','email','email_inbox','h_mid','h_high','solo','goal_time','tried_software']
+  }
+};
+
+// ─── Score ────────────────────────────────────────────────────────────────────
+function scoreAnswers() {
+  const allValues = [];
+
+  // Collect all selected values
+  Object.values(answers).forEach(v => {
+    if (Array.isArray(v)) allValues.push(...v);
+    else if (v) allValues.push(v);
+  });
+
+  // Text field hints
+  const q2 = (answers.q2 || '').toLowerCase();
+  const q9 = (answers.q9 || '').toLowerCase();
+  const textHints = q2 + ' ' + q9;
+
+  if (/invoice|payment|bill|chase/.test(textHints)) allValues.push('invoicing');
+  if (/follow.?up|lead|prospect/.test(textHints)) allValues.push('follow_up');
+  if (/schedul|book|calendar|appoint/.test(textHints)) allValues.push('scheduling');
+  if (/onboard|client|welcome/.test(textHints)) allValues.push('onboarding');
+  if (/post|content|social|instagram|tiktok/.test(textHints)) allValues.push('content_posting');
+  if (/report|track|number|analytic/.test(textHints)) allValues.push('reporting');
+  if (/email|message|respond|inbox/.test(textHints)) allValues.push('email_comms');
+  if (/copy|paste|data|entry/.test(textHints)) allValues.push('data_entry');
+
+  const scores = {};
+  Object.entries(AUTOMATIONS).forEach(([key, auto]) => {
+    scores[key] = allValues.filter(v => auto.triggers.includes(v)).length;
+  });
+
+  return Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([key]) => key);
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function startQuiz() {
+  document.getElementById('progress-bar-wrap').style.display = 'block';
+  document.getElementById('progress-label').style.display = 'block';
+  goTo('s1');
+}
+
+function goTo(id) {
+  document.getElementById(currentSection).classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  currentSection = id;
+  updateProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateProgress() {
+  const idx = QUIZ_SECTIONS.indexOf(currentSection);
+  if (idx < 0) return;
+  const pct = Math.round(((idx + 1) / QUIZ_SECTIONS.length) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `Section ${idx + 1} of ${QUIZ_SECTIONS.length}`;
+}
+
+// ─── Choice buttons ───────────────────────────────────────────────────────────
+document.querySelectorAll('.choices').forEach(group => {
+  group.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = group.dataset.type;
+      const q = group.dataset.q;
+      if (type === 'single') {
+        group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        answers[q] = btn.dataset.value;
+      } else {
+        btn.classList.toggle('selected');
+        const vals = [...group.querySelectorAll('.choice-btn.selected')].map(b => b.dataset.value);
+        answers[q] = vals;
+      }
+      autosave();
+    });
+  });
+});
+
+// ─── Autosave ─────────────────────────────────────────────────────────────────
+let saveTimer;
+function autosave() {
+  // Sync text inputs into answers
+  ['q1','q2','q9','firstName','email'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) answers[id] = el.value;
+  });
+
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem('zentara_audit', JSON.stringify(answers));
+    showToast('Progress saved');
+  }, 800);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── Restore ──────────────────────────────────────────────────────────────────
+function restoreState() {
+  const saved = localStorage.getItem('zentara_audit');
+  if (!saved) return;
+  try {
+    answers = JSON.parse(saved);
+  } catch { return; }
+
+  ['q1','q2','q9','firstName','email'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && answers[id]) el.value = answers[id];
+  });
+
+  document.querySelectorAll('.choices').forEach(group => {
+    const q = group.dataset.q;
+    const type = group.dataset.type;
+    const saved_val = answers[q];
+    if (!saved_val) return;
+    group.querySelectorAll('.choice-btn').forEach(btn => {
+      if (type === 'single' && btn.dataset.value === saved_val) btn.classList.add('selected');
+      if (type === 'multi' && Array.isArray(saved_val) && saved_val.includes(btn.dataset.value)) btn.classList.add('selected');
+    });
+  });
+}
+
+// ─── Submit ───────────────────────────────────────────────────────────────────
+async function submitQuiz() {
+  const firstName = document.getElementById('firstName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const err = document.getElementById('submit-error');
+  err.classList.remove('show');
+
+  if (!firstName || !email) {
+    err.textContent = 'Add your name and email to see your results.';
+    err.classList.add('show');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    err.textContent = 'That email doesn\'t look right.';
+    err.classList.add('show');
+    return;
+  }
+
+  answers.firstName = firstName;
+  answers.email = email;
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  // Score
+  const topKeys = scoreAnswers();
+  const topAutos = topKeys.map(k => AUTOMATIONS[k]);
+
+  // Build payload
+  const payload = {
+    form_type: 'automation-audit',
+    client_name: firstName,
+    email,
+    ...Object.fromEntries(
+      Object.entries(answers).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : v])
+    ),
+    top_automation_1: topAutos[0]?.name || '',
+    top_automation_2: topAutos[1]?.name || '',
+    top_automation_3: topAutos[2]?.name || '',
+  };
+
+  const ac1 = new AbortController();
+  const ac2 = new AbortController();
+  setTimeout(() => { ac1.abort(); ac2.abort(); }, 12000);
+
+  const formData = new FormData();
+  Object.entries(payload).forEach(([k, v]) => formData.append(k, v));
+  formData.append('_subject', `New Automation Audit — ${firstName}`);
+
+  await Promise.allSettled([
+    fetch('https://formspree.io/f/xvzvnkay', {
+      method: 'POST',
+      body: formData,
+      headers: { 'Accept': 'application/json' },
+      signal: ac1.signal
+    }),
+    fetch('https://api.elevasis.io/api/webhooks/inbound/wh_8fd8e08c5275cdd67d5d620ee79ef2a9', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      signal: ac2.signal
+    })
+  ]);
+
+  localStorage.removeItem('zentara_audit');
+
+  // Show results
+  showResults(firstName, topAutos);
+}
+
+// ─── Show results ─────────────────────────────────────────────────────────────
+function showResults(name, autos) {
+  document.getElementById('progress-bar-wrap').style.display = 'none';
+  document.getElementById('progress-label').style.display = 'none';
+
+  // Score ring — how automated are they? (based on answers)
+  const score = calcReadinessScore();
+  document.getElementById('results-score').textContent = score + '%';
+  document.getElementById('results-headline').innerHTML = `Your top <em>automation opportunities.</em>`;
+  document.getElementById('results-sub').textContent =
+    `Based on your answers, here are the three places automation would make the biggest difference for you.`;
+  document.getElementById('results-name-line').textContent =
+    name ? `Ranked specifically for ${name}'s business.` : '';
+
+  // Build cards
+  const container = document.getElementById('auto-cards');
+  container.innerHTML = '';
+  autos.forEach((auto, i) => {
+    const card = document.createElement('div');
+    card.className = `auto-card rank-${i + 1}`;
+    card.innerHTML = `
+      <div class="auto-rank">${i + 1}</div>
+      <div class="auto-tag">${i === 0 ? 'Top priority' : i === 1 ? 'High impact' : 'Quick win'}</div>
+      <div class="auto-name">${auto.name}</div>
+      <div class="auto-desc">${auto.desc}</div>
+      <div class="auto-impact">&#8599; ${auto.impact}</div>
+    `;
+    container.appendChild(card);
+  });
+
+  goTo('results');
+}
+
+function calcReadinessScore() {
+  // % of manual work they have — inverted to show how much is NOT automated
+  const manual_signals = [
+    answers.q11 === 'manual',
+    answers.q10 === 'nowhere' || answers.q10 === 'email_inbox',
+    answers.q12 === 'invoice_manual' || answers.q12 === 'invoice_chaos',
+    Array.isArray(answers.q6) && answers.q6.length >= 4,
+    answers.q8 === 'h_high' || answers.q8 === 'h_extreme',
+  ].filter(Boolean).length;
+  // Return "automation opportunity score"
+  const base = 45 + (manual_signals * 9) + Math.floor(Math.random() * 6);
+  return Math.min(base, 94);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+restoreState();
+</script>
+</body>
+</html>
